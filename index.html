@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <main class="container">
+        <h1>آلة حاسبة</h1>
+        <p class="subtitle">حساباتك بسهولة وبساطة</p>
+
+        <section class="calculator">
+            <input id="display" type="text" value="0"
+                   readonly aria-label="شاشة الآلة الحاسبة">
+
+            <div class="buttons">
+                <button class="clear" onclick="clearAll()">AC</button>
+                <button onclick="backspace()">DEL</button>
+                <button class="operator" onclick="chooseOperator('/')">÷</button>
+                <button class="operator" onclick="chooseOperator('*')">×</button>
+
+                <button onclick="addNumber('7')">7</button>
+                <button onclick="addNumber('8')">8</button>
+                <button onclick="addNumber('9')">9</button>
+                <button class="operator" onclick="chooseOperator('-')">−</button>
+
+                <button onclick="addNumber('4')">4</button>
+                <button onclick="addNumber('5')">5</button>
+                <button onclick="addNumber('6')">6</button>
+                <button class="operator" onclick="chooseOperator('+')">+</button>
+
+                <button onclick="addNumber('1')">1</button>
+                <button onclick="addNumber('2')">2</button>
+                <button onclick="addNumber('3')">3</button>
+                <button class="equal" onclick="calculate()">=</button>
+
+                <button class="zero" onclick="addNumber('0')">0</button>
+                <button onclick="addNumber('.')">.</button>
+            </div>
+            <p id="message" role="status"></p>
+        </section>
+
+        <footer>Simple Calculator · Powered by boles emad</footer>
+    </main>
+
+    <script>
+        const display = document.getElementById("display");
+        const message = document.getElementById("message");
+
+        let firstNumber = null;
+        let operation = null;
+        let startNewNumber = false;
+
+        function addNumber(number) {
+            message.textContent = "";
+
+            if (startNewNumber) {
+                display.value = number === "." ? "0." : number;
+                startNewNumber = false;
+                return;
+            }
+
+            if (number === "." && display.value.includes(".")) return;
+
+            if (display.value === "0" && number !== ".") {
+                display.value = number;
+            } else if (display.value.length < 15) {
+                display.value += number;
+            }
+        }
+
+        function chooseOperator(op) {
+            firstNumber = display.value;
+            operation = op;
+            startNewNumber = true;
+            message.textContent = "";
+        }
+
+        async function calculate() {
+            if (operation === null || startNewNumber) return;
+
+            const a = firstNumber;
+            const b = display.value;
+            const op = operation;
+
+            try {
+                const response = await fetch("/calculate", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        a: a,
+                        b: b,
+                        operation: op
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    message.textContent = data.error || "حصل خطأ";
+                    startNewNumber = true;
+                    operation = null;
+                    return;
+                }
+
+                display.value = String(Number(data.result.toPrecision(12)));
+                firstNumber = null;
+                operation = null;
+                startNewNumber = true;
+                message.textContent = "";
+            } catch (error) {
+                message.textContent = "تأكد إن الموقع شغال";
+            }
+        }
+
+        function clearAll() {
+            display.value = "0";
+            firstNumber = null;
+            operation = null;
+            startNewNumber = false;
+            message.textContent = "";
+        }
+
+        function backspace() {
+            if (startNewNumber) return;
+
+            display.value = display.value.length > 1
+                ? display.value.slice(0, -1)
+                : "0";
+        }
+    </script>
+</body>
+</html>
